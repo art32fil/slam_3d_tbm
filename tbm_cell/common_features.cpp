@@ -3,20 +3,24 @@ bool print_all_info = 0;
 
 bool approximatelyEqual(float a, float b, float epsilon)
 {
-    return fabs(a - b) <= ( (fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * epsilon);
+	float greater = fabs(a) < fabs(b) ? fabs(b) : fabs(a);
+    return fabs(a - b) <=   greater * epsilon;
 }
 
 bool essentiallyEqual(float a, float b, float epsilon)
 {
-    return fabs(a - b) <= ( (fabs(a) > fabs(b) ? fabs(b) : fabs(a)) * epsilon);
+	float lower = fabs(a) > fabs(b) ? fabs(b) : fabs(a);
+    return fabs(a - b) <=  lower * epsilon;
 }
 
 bool definitelyGreaterThan(float a, float b, float epsilon)
 {
-    return (a - b) > ( (fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * epsilon);
+	float greater = fabs(a) < fabs(b) ? fabs(b) : fabs(a);
+    return (a - b) > greater * epsilon;
 }
 
 bool definitelyLessThan(float a, float b, float epsilon)
 {
-    return (b - a) > ( (fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * epsilon);
+	float greater = fabs(a) < fabs(b) ? fabs(b) : fabs(a);
+    return (b - a) > greater * epsilon;
 }
