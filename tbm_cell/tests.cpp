@@ -1,13 +1,20 @@
 #include "tbm3.h"
 #include <iostream>
-#include <stdlib.h>
 #include <time.h>
 #include "common_features.h"
+#include <random>
+#include <iomanip>
+#include <string.h>
+#include <string>
+#include <cstring>
 
 using namespace std;
 
 TBM3::mass_t get_rand() {
-	return TBM3::mass_t(double(rand()%1021)/1021.0);
+	static random_device r;
+	static mt19937 mt(r());
+	static uniform_real_distribution<double> urd(0,1);
+	return urd(mt);
 }
 
 TBM3 build_correct_cell() {
@@ -29,17 +36,43 @@ TBM3 build_correct_cell() {
 		abc = get_rand();
 		sum = a+b+c+ab+ac+bc+abc;
 	} while (sum >= 1);
+
 	return TBM3(a,b,c,ab,ac,bc,abc);
 }
 
 int main(int argc, char** argv) {
-	srand(time(0));
+	if (argc < 2) {
+		cout << "Usage:\n\t" << argv[0] << " <print everything mode (0 or 1)>\n";
+		return 0;
+	}
+	else {
+		if (strcmp(argv[1],"true") == 0 or
+		    strcmp(argv[1],"1") == 0 or
+		    strcmp(argv[1],"True") == 0) {
+			print_all_info = true;
+		}
+		else
+			print_all_info = false;
+	}
 	cout << "**************" << endl
 	     << "*TBM BUILDING*" << endl
 	     << "**************" << endl;
 	cout << "1) building correct cell:\n" ;
-	for (int i = 0; i < 5; i++) {
+	int N = 5;
+	TBM3 arr[N];
+	for (int i = 0; i < N; i++) {
 		cout << "---------------------------------" << endl;
-		cout << "cell " << i << endl << build_correct_cell() << endl;
+		cout << "cell " << i << endl;
+		cout << (arr[i] = build_correct_cell()) << endl;
+	}
+	cout << "2) merging cells:" << endl;
+	for (int i = 0; i < N; i++) {
+		for (int j = i+1; j < N; j++) {
+			cout << " ---------------------------------" << endl;
+			cout << "  cell " << i << " " << arr[i] << endl
+			     << "+ cell " << j << " " << arr[j] << endl
+			     << "=        " << arr[i] + arr[j] << endl
+			     ;
+		}
 	}
 }

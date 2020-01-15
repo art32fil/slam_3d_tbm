@@ -19,7 +19,9 @@ private:
 
 	bool status;
 public:
-	TBM3(double a, double b, double c, double ab, double ac, double bc, double abc);
+	TBM3(double a = TBM3::ZERO, double b = TBM3::ZERO, double c = TBM3::ZERO,
+	     double ab = TBM3::ZERO, double ac = TBM3::ZERO, double bc = TBM3::ZERO,
+	     double abc = TBM3::ONE);
 	void normalize();
 
 	friend TBM3 operator + (const TBM3& a, const TBM3& b);

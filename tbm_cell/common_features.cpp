@@ -1,4 +1,5 @@
 #include <cmath>
+bool print_all_info = 0;
 
 bool approximatelyEqual(float a, float b, float epsilon)
 {
