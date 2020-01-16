@@ -28,17 +28,15 @@ TBM3::TBM3(double a, double b, double c,
 	}
 	//else if (summ > 1)
 	else if (definitelyGreaterThan(summ, TBM3::ONE, epsilon)) {
-		if (print_all_info)
-			std::cout << "cell is not normalized!" << std::endl
-			          << "summ of masses is greater than 1" << std::endl
-			          << *this << std::endl
-			          << "I don't know what to do!"<< std::endl;
+		std::cout << "cell is not normalized!" << std::endl
+		          << "summ of masses is greater than 1" << std::endl
+		          << *this << std::endl
+		          << "I don't know what to do!"<< std::endl;
 		status = false;
 	}
 	else {
-		if (print_all_info)
-			std::cout << "undefined behaviour total sum is !=, !>, !< than 1"
-			          << std::endl;
+		std::cout << "undefined behaviour total sum is !=, !>, !< than 1"
+		          << std::endl;
 		status = false;
 	}
 }
@@ -47,9 +45,8 @@ void TBM3::normalize() {
 	mass_t summ = a+b+c+ab+ac+bc+abc;
 	// if (summ > 1)
 	if (definitelyGreaterThan(summ, TBM3::ONE,epsilon)) {
-		if (print_all_info)
-			std::cout << "all masses are grater than one! for cell:\n"
-			          << *this << std::endl;
+		std::cout << "normalize: all masses are grater than one! for cell:\n"
+		          << *this << std::endl;
 		return;
 	}
 	a   /= summ; b  /= summ; c  /= summ;
