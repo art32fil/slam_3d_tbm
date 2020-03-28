@@ -13,7 +13,7 @@ OctoGridMap::OctoGridMap(int Nx, int Ny, int Nz):
 
 OctoGridMap::OctoGridMap(TBM3*** cells, int Nx, int Ny, int Nz) {
 	zero_x = Nx/2; zero_y = Ny/2; zero_z = Nz/2;
-	this->cells = vector<vector<vector<TBM3>>>((Nx, vector<vector<TBM3>>(Ny, vector<TBM3>(Nz, empty_cell))));
+	this->cells = std::move(vector<vector<vector<TBM3>>>(Nx, vector<vector<TBM3>>(Ny, vector<TBM3>(Nz, empty_cell))));
 	for (int i = 0; i < Nx; i++) {
 		for (int j = 0; j < Ny; j++) {
 			for (int k = 0; k < Nz; k++) {
@@ -35,17 +35,18 @@ OctoGridMap::OctoGridMap(vector<vector<vector<TBM3>>>&& cells):
 	this->cells = cells;
 }
 
-TBM3& OctoGridMap::operator [](int x, int y, int z) {
-	int i = x + zero_x;
-	int j = y + zero_y;
-	int k = z + zero_z;
+TBM3& OctoGridMap::operator [](Coord3D c) {
+	int i = c.i + zero_x;
+	int j = c.j + zero_y;
+	int k = c.k + zero_z;
 
 	if (i < 0 or j < 0 or k < 0) {
-		cout << "(" << x << ", " << y << ", " << z << ") coords where zero is at "
+		cout << "(" << c.i << ", " << c.j << ", " << c.k << ") coords where zero is at "
 		     << "(" << zero_x << ", " << zero_y << ", " << zero_z << ") comes to negative array index!" << endl;
 		std::exit(0);
 	}
 
 	if (i < cells.size() and j < cells[0].size() and k < cells[0][0].size())
 		return cells[i][j][k];
+
 }

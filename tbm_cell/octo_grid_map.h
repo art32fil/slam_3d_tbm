@@ -4,8 +4,16 @@
 #include "tbm3.h"
 #include <vector>
 
+using std::vector;
+
+struct Coord3D {
+	int i;
+	int j;
+	int k;
+};
+
 class OctoGridMap {
-	using std::vector;
+
 	vector<vector<vector<TBM3>>> cells;
 	const TBM3 empty_cell = TBM3(0,0,0,0,0,0,1);
 	int zero_x;
@@ -18,7 +26,7 @@ public:
 	OctoGridMap(const vector<vector<vector<TBM3>>>& cells);
 	OctoGridMap(vector<vector<vector<TBM3>>>&& cells);
 
-	TBM3& operator [] (int i, int j, int k);
+	TBM3& operator [] (Coord3D c);
 };
 
-#endif OCTO_GRID_MAP_H_ /* OCTO_GRID_MAP_H_ */
+#endif  /* OCTO_GRID_MAP_H_ */
