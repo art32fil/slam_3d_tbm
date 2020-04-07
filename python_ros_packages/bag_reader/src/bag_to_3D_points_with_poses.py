@@ -14,27 +14,19 @@ import numpy as np
 from ros_numpy import point_cloud2
 import math
 from sensor_msgs.msg import ChannelFloat32
+from visualization_msgs.msg import Marker
+from map import Map
+from map import cell_to_prob
+from map import merge_cells
 
 from bresenham import bresenhamline
 from cloud_to_marker import cloud_to_marker
-from visualization_msgs.msg import Marker
-from geometry_msgs.msg import Pose
-from geometry_msgs.msg import Point
-from geometry_msgs.msg import Quaternion
-from geometry_msgs.msg import Vector3
-from std_msgs.msg import ColorRGBA
+
 
 class Cloud:
 	def __init__(self, name="", values=np.array([[]])):
 		self.name = name
 		self.values = values
-
-class Cell:
-	def __init__(self, a, nota, both):
-		summ = a+nota+both
-		self.a = a/summ
-		self.nota = nota/summ
-		self.both = both/summ
 
 def position_to_cell(pose, scale):
 	i = int(math.floor(pose[0]/scale))
@@ -43,55 +35,7 @@ def position_to_cell(pose, scale):
 	return np.array([[i,j,k]])
 
 def positions_to_cell(array, scale):
-	return np.floor(array/scale)
-
-def cell_to_position(cell, scale):
-	x = float((cell[0]+0.5)*scale)
-	y = float((cell[1]+0.5)*scale)
-	z = float((cell[2]+0.5)*scale)
-	return Point(x,y,z)
-
-class Map:
-	def __init__(self, scale):
-		self.Nx, self.Ny, self.Nz = 200, 200, 200
-		self.map = [[[0] * self.Nz for i in range(self.Ny)] for j in range(self.Nx)]
-		self.scale = scale
-		self.Zx, self.Zy, self.Zz = int(self.Nx/2), int(self.Ny/2), int(self.Nz/2)
-	def update(self, point, value):
-		if (point[0]+self.Zx >= self.Nx or point[0]+self.Zx < 0 or
-		    point[1]+self.Zy >= self.Ny or point[1]+self.Zy < 0 or
-		    point[2]+self.Zz >= self.Nz or point[2]+self.Zz < 0):
-			print("zhopa")
-			return
-		self.map[int(point[0])+self.Zx][int(point[1])+self.Zy][int(point[2])+self.Zz] = value
-	def update_cells(self, array, value):
-		try:
-			array_shifted = array.astype(int) + np.array([self.Zx, self.Zy, self.Zz])
-			for p in array_shifted:
-				self.map[p[0]][p[1]][p[2]] = value
-		except IndexError:
-			return
-	def to_marker(self):
-		marker_msg = Marker()
-		marker_msg.header.stamp = rospy.Time.now()
-		marker_msg.header.frame_id = "world"
-		marker_msg.ns = 'b'
-		marker_msg.id = 0
-		marker_msg.type = Marker.POINTS
-		marker_msg.action = Marker.ADD
-		marker_msg.pose = Pose(Point(0,0,0), Quaternion(0,0,0,1))
-		marker_msg.scale = Vector3(0.03,0.03,0.01)
-		marker_msg.color = ColorRGBA(0,1,0,0.5)
-		marker_msg.lifetime = rospy.Duration(0)
-		marker_msg.points = []
-
-		for i in range(self.Nx):
-			for j in range(self.Ny):
-				for k in range(self.Nz):
-					if self.map[i][j][k] != 0:
-						pt = cell_to_position((i-self.Zx,j-self.Zy,k-self.Zz), self.scale)
-						marker_msg.points.append(pt)
-		return marker_msg
+	return np.floor(array/scale).astype(int)
 
 def get_pose_angle(transform):
 	if not isinstance(transform, TransformStamped):
@@ -106,8 +50,8 @@ def get_pose_angle(transform):
 def getSE3_matrix(pose,quaternion):
 	# pose = np.array([x, y, z])
 	# quaternion = np.array([x y z w])
-	g = tr.quaternion_matrix(q)
-	g[0:3, -1] = p
+	g = tr.quaternion_matrix(quaternion)
+	g[0:3, -1] = pose
 	return g
 	
 
@@ -126,20 +70,11 @@ def transform_cloud(SE3, new_frame, cloud):
 	return cloud_out
 
 def cost_of_scan(grid_map, scan, robot_pose):
-	free_points = bresenhamline(scan, robot_pose,-1).astype(int) + np.array([grid_map.Zx, grid_map.Zy, grid_map.Zz])
 	occupied_points = scan.astype(int) + np.array([grid_map.Zx, grid_map.Zy, grid_map.Zz])
-	accumulator = 0
-	for fp in free_points:
-		try:
-			accumulator += abs(grid_map.map[fp[0]][fp[1]][fp[2]] - 0)
-		except IndexError:
-			continue
-	for op in occupied_points:
-		try:
-			accumulator += abs(grid_map.map[fp[0]][fp[1]][fp[2]] - 1)
-		except IndexError:
-			continue
-	return accumulator
+	occ_cells = grid_map.map[occupied_points[:,0],occupied_points[:,1],occupied_points[:,2]]
+	value = np.sum(np.abs(cell_to_prob(merge_cells(occ_cells, np.array([0.5,0,0.5])))-1))
+
+	return value#accumulator
 		
 def find_best_pose(grid_map, scan_meters, robot_pose_meters, robot_quaternion, scale, world_frame):
 	
@@ -152,24 +87,41 @@ def find_best_pose(grid_map, scan_meters, robot_pose_meters, robot_quaternion, s
 	min_cost = cost_of_scan(grid_map, cloud_cells, robot_cells)
 	final_robot_cells = robot_cells
 	final_cloud_cells = cloud_cells
+	final_pose_delta = np.array([0.0, 0.0, 0.0])
+	final_quaternion_delta = np.array([0.0, 0.0, 0.0, 1.0])
 
-	for i in range(10):
-		new_pose = final_pose + 10*np.random.randn(3)
-		new_quaternion = final_quaternion + 10*np.random.randn(1,4)
-		SE3 = getSE3_matrix(new_pose, new_quaternion)
-		cloud_out = transform_cloud(SE3, world_frame, scan_meters)
+	for i in range(1000):
+		delta_pose = 2*scale*np.random.randn(3)
+		new_pose = final_pose + delta_pose
+		theta_2 = 0.1*np.random.randn(1)
+		delta_quaternion = np.concatenate((np.sin(theta_2)*np.random.rand(3), np.cos(theta_2))) 
+		new_quaternion = tr.quaternion_multiply(final_quaternion, delta_quaternion)
+		new_SE3 = getSE3_matrix(new_pose, new_quaternion)
+		#print(SE3 - new_SE3)
+		#print("before transform_cloud")
+		#t = rospy.Time.now()
+		cloud_out = transform_cloud(new_SE3, world_frame, scan_meters)
+		#print("transform_cloud executes: ", rospy.Time.now() - t)
+		#print("after transform_cloud")
 		cloud_cells = positions_to_cell(np.transpose(cloud_out.values[0:-1]), scale)
 		
 		robot_cells = position_to_cell(new_pose, scale)
 
+		#print("before cost_of_scan")
+		#t = rospy.Time.now()
 		cost = cost_of_scan(grid_map, cloud_cells, robot_cells)
+		print("min_cost: ", min_cost, ", cost: ", cost)
+		#print("cost_of_scan executes:    ", rospy.Time.now() - t)
+		#print("after cost_of_scan")
 		if cost < min_cost:
 			min_cost = cost
 			final_pose = new_pose
 			final_quaternion = new_quaternion
 			final_robot_cells = robot_cells
 			final_cloud_cells = cloud_cells
-	return final_pose, final_quaternion, final_robot_cells, final_cloud_cells
+			final_pose_delta = delta_pose
+			final_quaternion_delta = delta_quaternion
+	return final_pose, final_quaternion, final_robot_cells, final_cloud_cells, final_pose_delta, final_quaternion_delta
 
 def get_tf_transform(in_which_frame, what_frame, tf_buffer):
 	try:
@@ -183,6 +135,14 @@ def get_tf_transform(in_which_frame, what_frame, tf_buffer):
 		rospy.logwarn(ex)
 		return None
 	return trans
+
+def time_to_s_ms_ns(t):
+	t = t.to_nsec()
+	secs = int(t/1000000000)
+	msecs = int(t/1000000) - 1000*secs
+	mksecs = int(t/1000) - 1000*msecs - 1000000*secs
+	nsecs = t - 1000*mksecs - 1000000*msecs - 1000000000*secs
+	return "%ss %sms %smks %sns"%(secs,msecs,mksecs,nsecs)
 
 if __name__ == '__main__':
 	rospy.init_node("name_by_default")
@@ -209,6 +169,10 @@ if __name__ == '__main__':
 	
 	r = rospy.Rate(1)
 	m = Map(scale)
+	t3 = rospy.Time.now()
+
+	dp = np.array([0., 0., 0.])
+	dq = np.array([0., 0., 0., 1.])
 	for topic, msg, time in bag.read_messages(topics = [topic_pcl2_name, "/tf", "/tf_static"]):
 		if rospy.is_shutdown():
 			break
@@ -226,6 +190,8 @@ if __name__ == '__main__':
 			if (trans == None):
 				continue
 			p,q = get_pose_angle(trans)
+			p = p+dp
+			q = tr.quaternion_multiply(q,dq)
 			SE3 = getSE3_matrix(p,q)
 			
 			
@@ -234,26 +200,30 @@ if __name__ == '__main__':
 			
 			#cloud_out = transform_cloud(SE3, trans.header.frame_id, cloud)
 			#pts = cloud_out.values
-			print("1")
+			t1 = rospy.Time.now()
+			print("pub markers:  ", time_to_s_ms_ns(t1 - t3))
 			#print(cloud_out.values.shape)
 			#occupied_cells = np.transpose(positions_to_cell(pts[0:-1,:],scale))
 			(best_camera_pose_meters,
 			best_camera_quaternion,
 			best_camera_cells,
-			best_cloud_cells) = find_best_pose(m, cloud, p, q, scale, odom_frame)
+			best_cloud_cells,
+			delta_pose,
+			delta_quater) = find_best_pose(m, cloud, p, q, scale, odom_frame)
 			cloud_out = transform_cloud(getSE3_matrix(best_camera_pose_meters, best_camera_quaternion),
 			                            odom_frame, cloud)
+			#print(delta_pose)
+			#print(delta_quater)
+			dp += delta_pose
+			dq = tr.quaternion_multiply(dq,delta_quater)
 			line = bresenhamline(best_cloud_cells, best_camera_cells,-1)
-			print("2")
-			m.update_cells(line,0)
-			m.update_cells(best_cloud_cells,1)
-			print("3")
-			'''for i in range(len(pts[0])):
-				pt_cell = position_to_cell(pts[:,i], scale)
-				line = bresenhamline(camera_pose_cell, pt_cell, -1)
-				for p in line:
-					m.update(p,0)
-				m.update(line[-1],1)'''
+			t2 = rospy.Time.now()
+			print("scan matcher: ", time_to_s_ms_ns(t2 - t1))
+			print(type(line[0][0]).__name__)
+			m.update_cells(line,np.array([0.05, 0.9, 0.05]))
+			m.update_cells(best_cloud_cells,np.array([0.9, 0.05, 0.05]))
+			t3 = rospy.Time.now()
+			print("update cells: ", time_to_s_ms_ns(t3 - t2))
 				
 
 			pub1.publish(cloud_to_marker(cloud_out,1,0,0))
