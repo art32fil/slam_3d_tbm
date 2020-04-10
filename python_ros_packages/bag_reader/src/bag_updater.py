@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import sys
 import rospy
 import rosbag
 import numpy as np
@@ -22,64 +23,68 @@ def world_to_cell(point, scale):
 	return (i,j,k)
 
 if __name__ == '__main__':
-	rospy.init_node("tester")
+	#rospy.init_node("tester")
 	#pub = rospy.Publisher("m_topic",Marker,queue_size=10)
 	#pub_tf = rospy.Publisher("/tf",tfMessage,queue_size=100)
-	bag_in = rosbag.Bag("/home/west/Downloads/rgbd_dataset_freiburg1_room-2hz-with-pointclouds.bag", 'r')
-	bag_out = rosbag.Bag("/home/west/Downloads/rgbd_dataset_freiburg1_room-2hz-with-pointclouds-1700points_per_scan-4D.bag", 'w')
-	for topic, msg, time in bag_in.read_messages():
-		if rospy.is_shutdown():
-			break
-		'''if topic == "/tf":
-			for tr in msg.transforms:
-				tr.header.stamp = rospy.Time.now()
-			pub_tf.publish(msg)'''
-			
-		if topic == "/camera/depth/points":
-			point_cloud = msg
-			pts = point_cloud2.pointcloud2_to_array(point_cloud)
-			d = {}
-			for raw in pts:
-				for pt in raw:
-					pt = np.array([pt[0], pt[1], pt[2], 1])
-					if isnan(pt[0])  or isnan(pt[1]) or isnan(pt[2]):
-						continue
-					cell = world_to_cell(pt, 0.05)
-					if cell in d:
-						d[cell] = np.append(d[cell],pt)
-					else:
-						d[cell] = np.array([pt])
-			float_array = np.array([])
-
-			'''marker_msg = Marker()
-			marker_msg.header.stamp = rospy.Time.now()
-			marker_msg.header.frame_id = point_cloud.header.frame_id
-			marker_msg.ns = 'a'
-			marker_msg.id = 0
-			marker_msg.type = Marker.POINTS
-			marker_msg.action = Marker.ADD
-			marker_msg.pose = Pose(Point(0,0,0), Quaternion(0,0,0,1))
-			marker_msg.scale = Vector3(0.01,0.01,0.01)
-			marker_msg.color = ColorRGBA(1,0,0,0.5)
-			marker_msg.lifetime = rospy.Duration(0)'''
-			points = []
-			
-			for k,v in d.items():
-				avg_point = np.average(np.reshape(v,(-1,4)), axis=0)
-				float_array = np.append(float_array, avg_point)
-				points.append(Point(avg_point[0], avg_point[1], avg_point[2]))
-			#marker_msg.points = points
-			print(len(points))
-			
-			#pub.publish(marker_msg)
-			
-			msg_sparse_point_cloud = ChannelFloat32()
-			msg_sparse_point_cloud.name = point_cloud.header.frame_id
-			msg_sparse_point_cloud.values = [np.float32(x) for x in float_array]
-			msg = msg_sparse_point_cloud
+	for i in range(len(sys.argv)):
+		if i == 0:
+			continue
+		bag_in = rosbag.Bag(sys.argv[i], 'r')
+		name = sys.argv[i][:sys.argv[i].rindex(".bag")]
+		bag_out = rosbag.Bag(name+"-1700points_per_scan-4D.bag", 'w')
+		for topic, msg, time in bag_in.read_messages():
+			'''if rospy.is_shutdown():
+				break'''
+			'''if topic == "/tf":
+				for tr in msg.transforms:
+					tr.header.stamp = rospy.Time.now()
+				pub_tf.publish(msg)'''
 				
-		bag_out.write(topic, msg, time)
-	bag_out.close()
+			if topic == "/camera/depth/points":
+				point_cloud = msg
+				pts = point_cloud2.pointcloud2_to_array(point_cloud)
+				d = {}
+				for raw in pts:
+					for pt in raw:
+						pt = np.array([pt[0], pt[1], pt[2], 1])
+						if isnan(pt[0])  or isnan(pt[1]) or isnan(pt[2]):
+							continue
+						cell = world_to_cell(pt, 0.05)
+						if cell in d:
+							d[cell] = np.append(d[cell],pt)
+						else:
+							d[cell] = np.array([pt])
+				float_array = np.array([])
+
+				'''marker_msg = Marker()
+				marker_msg.header.stamp = rospy.Time.now()
+				marker_msg.header.frame_id = point_cloud.header.frame_id
+				marker_msg.ns = 'a'
+				marker_msg.id = 0
+				marker_msg.type = Marker.POINTS
+				marker_msg.action = Marker.ADD
+				marker_msg.pose = Pose(Point(0,0,0), Quaternion(0,0,0,1))
+				marker_msg.scale = Vector3(0.01,0.01,0.01)
+				marker_msg.color = ColorRGBA(1,0,0,0.5)
+				marker_msg.lifetime = rospy.Duration(0)'''
+				points = []
+				
+				for k,v in d.items():
+					avg_point = np.average(np.reshape(v,(-1,4)), axis=0)
+					float_array = np.append(float_array, avg_point)
+					points.append(Point(avg_point[0], avg_point[1], avg_point[2]))
+				#marker_msg.points = points
+				print(len(points))
+				
+				#pub.publish(marker_msg)
+				
+				msg_sparse_point_cloud = ChannelFloat32()
+				msg_sparse_point_cloud.name = point_cloud.header.frame_id
+				msg_sparse_point_cloud.values = [np.float32(x) for x in float_array]
+				msg = msg_sparse_point_cloud
+					
+			bag_out.write(topic, msg, time)
+		bag_out.close()
 
 '''import rospy
 from rospy.numpy_msg import numpy_msg

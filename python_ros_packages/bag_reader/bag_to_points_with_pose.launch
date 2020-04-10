@@ -2,10 +2,14 @@
 	<arg name="node_start_delay" default="0.0" />
 
 	<arg name="bag/file_path" default="/home/west/Downloads/rgbd_dataset_freiburg1_room-2hz-with-pointclouds-1700points_per_scan-4D.bag"/>
-	<arg name="bag/topic_pcl" default="/camera/depth/points"/>	
+	<arg name="bag/topic_pcl" default="/camera/depth/points"/>
+	<arg name="tf/world_frame" default="world_world"/>
 	<arg name="tf/odom_frame" default="world"/>
 	<arg name="tf/pcl_frame" default="openni_depth_optical_frame"/>
 	<arg name="map/meters_per_cell" default="0.05"/>
+	<arg name="out/file_poses" default="/home/west/slam3D_ws/src/bag_reader/out_pose.txt"/>
+	<arg name="sm/allow_scan_matcher" default="True"/>
+	<arg name="seed" default="6"/>
 
 	<node pkg="bag_reader"
 	      type="bag_to_3D_points_with_poses.py"
@@ -15,11 +19,15 @@
 
 		<param name="bag/file_path" value="$(arg bag/file_path)"/>
 		<param name="bag/topic_pcl" value="$(arg bag/topic_pcl)"/>
+		<param name="tf/world_frame" value="$(arg tf/world_frame)"/>
 		<param name="tf/odom_frame" value="$(arg tf/odom_frame)"/>
 		<param name="tf/pcl_frame" value="$(arg tf/pcl_frame)"/>
 		<param name="map/meters_per_cell" value="$(arg map/meters_per_cell)"/>
+		<param name="out/file_poses" value="$(arg out/file_poses)"/>
+		<param name="sm/allow_scan_matcher" value="$(arg sm/allow_scan_matcher)"/>
+		<param name="seed" value="$(arg seed)"/>
 	</node>
 
-	 <node name="rviz" pkg="rviz" type="rviz" respawn="true"
-        	args="-d $(find bag_reader)/rviz/pcl2_viz.rviz" />
+	<!-- <node name="rviz" pkg="rviz" type="rviz" respawn="true"
+        	args="-d $(find bag_reader)/rviz/pcl2_viz.rviz" />-->
 </launch>

@@ -6,6 +6,7 @@ from geometry_msgs.msg import Quaternion
 from geometry_msgs.msg import Vector3
 from std_msgs.msg import ColorRGBA
 import numpy as np
+import numexpr as ne
 import rospy
 
 def cell_to_position(cell, scale):
@@ -38,14 +39,21 @@ class Cell:
 		return self.a + self.ab/2
 
 def merge_cells(c1, c2):
-	neqzero = 1.0 - (c1[...,0]*c2[...,1] + c1[...,1]*c2[...,0])
-	a = c1[...,0]*c2[...,0] + c1[...,2]*c2[...,0] + c1[...,0]*c2[...,2]
-	b = c1[...,1]*c2[...,1] + c1[...,2]*c2[...,1] + c1[...,1]*c2[...,2]
-	ab = c1[...,2]*c2[...,2]
+	c1_a = c1[...,0]
+	c1_b = c1[...,1]
+	c1_ab = c1[...,2]
+	c2_a = c2[...,0]
+	c2_b = c2[...,1]
+	c2_ab = c2[...,2]
+	
+	neqzero = ne.evaluate("1.0 - (c1_a*c2_b + c1_b*c2_a)")
+	a = ne.evaluate("c1_a*c2_a + c1_ab*c2_a + c1_a*c2_ab")
+	b = ne.evaluate("c1_b*c2_b + c1_ab*c2_b + c1_b*c2_ab")
+	ab = ne.evaluate("c1_ab*c2_ab")
 	answer = np.full_like(c1,0)
-	answer[...,0] = a/neqzero
-	answer[...,1] = b/neqzero
-	answer[...,2] = ab/neqzero
+	answer[...,0] = ne.evaluate("a/neqzero")
+	answer[...,1] = ne.evaluate("b/neqzero")
+	answer[...,2] = ne.evaluate("ab/neqzero")
 	return answer
 
 def cell_to_prob(c):
@@ -55,7 +63,7 @@ class Map:
 	def __init__(self, scale):
 		self.Nx, self.Ny, self.Nz = 500, 500, 500
 		#self.map = [[[0] * self.Nz for i in range(self.Ny)] for j in range(self.Nx)]
-		self.map = np.zeros((self.Nx, self.Ny, self.Nz,3), dtype=float)
+		self.map = np.zeros((self.Nx, self.Ny, self.Nz, 3), dtype=float)
 		self.map[:,:,:,0] = 0.05
 		self.map[:,:,:,1] = 0.05
 		self.map[:,:,:,2] = 0.9
@@ -65,7 +73,6 @@ class Map:
 		self.i = 0
 	def update_cells(self, array, value):
 		array_shifted = array + np.array([self.Zx, self.Zy, self.Zz])
-		map_buffer = np.copy(self.map) 
 		try:
 			cells = self.map[array_shifted[:,0],array_shifted[:,1],array_shifted[:,2]]
 			updated_cells = merge_cells(cells,value)
@@ -77,7 +84,7 @@ class Map:
 	def to_marker(self):
 		marker_msg = Marker()
 		marker_msg.header.stamp = rospy.Time.now()
-		marker_msg.header.frame_id = "world"
+		marker_msg.header.frame_id = "world_world"
 		marker_msg.ns = 'b'
 		marker_msg.id = 0
 		marker_msg.type = Marker.POINTS
@@ -94,7 +101,7 @@ class Map:
 					if self.map[i][j][k] != 0:
 						pt = cell_to_position((i-self.Zx,j-self.Zy,k-self.Zz), self.scale)
 						marker_msg.points.append(pt)'''
-		occ_points = np.transpose(np.array(np.where(self.map[:,:,:,0] > 0.5)))
+		occ_points = np.transpose(np.array(np.where(self.map[:,:,:,0] > 0.93)))
 		for p in occ_points:
 			pt = cell_to_position((p[0] - self.Zx,p[1]-self.Zy,p[2]-self.Zz), self.scale)
 			marker_msg.points.append(pt)
