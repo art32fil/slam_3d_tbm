@@ -4,55 +4,91 @@
     <title>RMSE values for 3D TBM SLAM</title>
   </head>
   <body>
+    <div>
+      <p>Experiments are presented as following:</p>
+      <ol>
+        <li>SLAM algorithm is launched and generates a log of poses</li>
+        <li>Output log file is compared with groundtruth and it provides a RMSE value between them</li>
+        <li>These two steps repeat several times</li>
+        <li>It calculates a mean value of RMSE</li>
+      </ol>
+    </div>
     <table border="1" style="text-align:center">
       <tr>
         <td>
           <b>Sequence name</b>
         </td>
         <td>
-          <b>RMSE</b>
+          <b>amount of launches</b>
+        </td>
+        <td>
+          <b>RMSE, m</b>
         </td>
         <td>
           <b>trajectory example</b>
         </td>
       </tr>
       <tr>
-        <td>rgbd_dataset_freiburg1_xyz</td>
+        <td>
+          <a href="https://vision.in.tum.de/data/datasets/rgbd-dataset/download#freiburg1_xyz">freiburg1_xyz</a>
+        </td>
+        <td>10</td>
         <td>0.11463 ± 0.02312</td>
         <td></td>
       </tr>
       <tr>
-        <td>rgbd_dataset_freiburg1_360</td>
+        <td>
+          <a href="https://vision.in.tum.de/data/datasets/rgbd-dataset/download#freiburg1_360">freiburg1_360</a>
+        </td>
+        <td>10</td>
         <td>0.16767 ± 0.03693</td>
         <td></td>
       </tr>
       <tr>
-        <td>rgbd_dataset_freiburg2_desk_with_person</td>
+        <td>
+          <a href="https://vision.in.tum.de/data/datasets/rgbd-dataset/download#freiburg2_desk_with_person">freiburg2_desk_with_person</a>
+        </td>
         <td></td>
+        <td>0</td>
         <td></td>
       </tr>
       <tr>
-        <td>rgbd_dataset_freiburg1_room</td>
+        <td>
+          <a href="https://vision.in.tum.de/data/datasets/rgbd-dataset/download#freiburg1_room">freiburg1_room</a>
+        </td>
+        <td>10</td>
         <td>0.20300 ± 0.07432</td>
         <td></td>
       </tr>
       <tr>
-        <td>rgbd_dataset_freiburg1_desk2</td>
+        <td>
+          <a href="https://vision.in.tum.de/data/datasets/rgbd-dataset/download#freiburg1_desk2">freiburg1_desk2</a>
+        </td>
+        <td>10</td>
         <td>0.11188 ± 0.03088</td>
         <td></td>
       </tr>
       <tr>
-        <td>rgbd_dataset_freiburg1_floor</td>
+        <td>
+          <a href="https://vision.in.tum.de/data/datasets/rgbd-dataset/download#freiburg1_floor">freiburg1_floor</a>
+        </td>
+        <td>10</td>
         <td>0.30840 ± 0.05225</td>
         <td></td>
       </tr>
       <tr>
-        <td>rgbd_dataset_freiburg3_walking_xyz</td>
+        <td>
+          <a href="https://vision.in.tum.de/data/datasets/rgbd-dataset/download#freiburg3_walking_xyz">freiburg3_walking_xyz</a>
+        </td>
+        <td>10</td>
         <td>0.18288 ± 0.03751</td>
         <td></td>
       </tr>
       <tr>
-        <td>rgbd_dataset_freiburg1_desk</td>
+        <td>
+          <a href="https://vision.in.tum.de/data/datasets/rgbd-dataset/download#freiburg1_desk">freiburg1_desk</a>
+        </td>
+        <td>10</td>
         <td>0.09911 ± 0.01292</td>
         <td></td>
       </tr>
